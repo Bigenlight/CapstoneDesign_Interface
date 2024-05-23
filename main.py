@@ -10,7 +10,7 @@ from folium.plugins import MarkerCluster
 import numpy as np
 from jinja2 import Template
 
-port_name = 'COM5'
+port_name = 'COM6'
 
 form_class = uic.loadUiType("V1_UI.ui")[0]
 app = QtWidgets.QApplication(sys.argv)
@@ -235,7 +235,8 @@ class WindowClass(QMainWindow, form_class):
     def add_marker_to_map(self, lat, lng):
         js = Template(
             """
-        L.marker([{{latitude}}, {{longitude}}] ).addTo({{map}});
+        console.log("Adding marker at: {{latitude}}, {{longitude}}");
+        L.marker([{{latitude}}, {{longitude}}]).addTo({{map}});
         """
         ).render(map=self.m.get_name(), latitude=lat, longitude=lng)
         self.view.page().runJavaScript(js)
