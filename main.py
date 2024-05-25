@@ -104,6 +104,9 @@ class WindowClass(QMainWindow, form_class):
         self.listViewModel2 = QStandardItemModel(self.listView_2)
         self.listView_2.setModel(self.listViewModel2)
 
+        # List to store received coordinates
+        self.received_coordinates = []
+
         # Connect buttons to their respective methods
         self.pushButton_2.clicked.connect(self.clear_coordinates_list)
         self.pushButton_1.clicked.connect(self.draw_line_between_coordinates)
@@ -116,7 +119,7 @@ class WindowClass(QMainWindow, form_class):
 
         # Initialize serial connection
         try:
-            self.ser = serial.Serial(port_name, 9600, timeout=1)  # Replace 'COM5' with your serial port
+            self.ser = serial.Serial(port_name, 9600, timeout=1)  # Replace 'COM6' with your serial port
         except serial.SerialException as e:
             print(f"Error opening serial port: {e}")
             self.ser = None
@@ -179,7 +182,7 @@ class WindowClass(QMainWindow, form_class):
         # Create a polyline on the map
         js = Template(
             """
-        L.polyline({{coordinates}}, {color: 'red'}).addTo({{map}});
+        L.polyline({{coordinates}}, {color: 'green'}).addTo({{map}});
         """
         ).render(map=self.m.get_name(), coordinates=json.dumps(coordinates))
         self.view.page().runJavaScript(js)
@@ -222,23 +225,25 @@ class WindowClass(QMainWindow, form_class):
                 self.listViewModel2.appendRow(item)
                 # Check if the line contains coordinates
                 if line.startswith('(') and line.endswith(')'):
-                    coords = line[1:-1].split(', ')
+                    coords = line[1:-1].split(',')
                     if len(coords) == 2:
                         try:
                             lng, lat = float(coords[0]), float(coords[1])
-                            self.add_marker_to_map(lat, lng)
+                            self.received_coordinates.append([lat, lng])
+                            self.update_map_with_line()
                         except ValueError:
                             pass
             except serial.SerialException as e:
                 print(f"Error reading from serial port: {e}")
 
-    def add_marker_to_map(self, lat, lng):
+    def update_map_with_line(self):
+        # Create a polyline on the map with received coordinates
         js = Template(
             """
-        console.log("Adding marker at: {{latitude}}, {{longitude}}");
-        L.marker([{{latitude}}, {{longitude}}]).addTo({{map}});
+        console.log("Drawing line with coordinates: {{coordinates}}");
+        L.polyline({{coordinates}}, {color: 'red'}).addTo({{map}});
         """
-        ).render(map=self.m.get_name(), latitude=lat, longitude=lng)
+        ).render(map=self.m.get_name(), coordinates=json.dumps(self.received_coordinates))
         self.view.page().runJavaScript(js)
 
 w = WindowClass()
