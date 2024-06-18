@@ -216,8 +216,8 @@ class WindowClass(QMainWindow, form_class):
         if not coordinates:
             return
 
-        # Convert coordinates to a string
-        coord_str = "; ".join([f"({lat}, {lng})" for lat, lng in coordinates])
+        # Convert coordinates to a string with order numbers
+        coord_str = "; ".join([f"({lat}, {lng}, {idx})" for idx, (lat, lng) in enumerate(coordinates)])
         
         # Add start and end
         coord_str = f"start; {coord_str}; end;"
