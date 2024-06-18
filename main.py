@@ -10,7 +10,32 @@ from folium.plugins import MarkerCluster
 import numpy as np
 from jinja2 import Template
 
-port_name = 'COM6'
+# mqtt
+import paho.mqtt.client as mqtt
+
+# Define the MQTT broker address and port
+broker_address = "192.168.0.12"  # IP address of your Windows PC
+port = 1883  # Default MQTT port
+
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected to broker")
+    else:
+        print("Connection failed with code", rc)
+
+
+# Define the topic
+topic = "test/topic"
+
+client = mqtt.Client("WindowsPublisher")
+
+client.on_connect = on_connect
+
+client.connect(broker_address, port)
+client.loop_start()
+
+number = 0
 
 form_class = uic.loadUiType("V1_UI.ui")[0]
 app = QtWidgets.QApplication(sys.argv)
@@ -114,15 +139,8 @@ class WindowClass(QMainWindow, form_class):
 
         # Set up a timer to poll the serial port
         self.timer = QTimer()
-        self.timer.timeout.connect(self.read_from_serial)
+        #self.timer.timeout.connect(self.read_from_serial)
         self.timer.start(1000)  # Poll every second
-
-        # Initialize serial connection
-        try:
-            self.ser = serial.Serial(port_name, 9600, timeout=1)  # Replace 'COM6' with your serial port
-        except serial.SerialException as e:
-            print(f"Error opening serial port: {e}")
-            self.ser = None
 
     def closeEvent(self, event):
         if self.ser and self.ser.is_open:
@@ -210,31 +228,49 @@ class WindowClass(QMainWindow, form_class):
         
         # Add start and end
         coord_str = f"start; {coord_str}; end"
+        print(coord_str)
+        # if self.ser and self.ser.is_open:
+        #     try:
+        #         self.ser.write(coord_str.encode())
+        #     except serial.SerialException as e:
+        #         print(f"Error writing to serial port: {e}")
 
-        if self.ser and self.ser.is_open:
-            try:
-                self.ser.write(coord_str.encode())
-            except serial.SerialException as e:
-                print(f"Error writing to serial port: {e}")
 
-    def read_from_serial(self):
-        if self.ser and self.ser.in_waiting > 0:
-            try:
-                line = self.ser.readline().decode('utf-8').strip()
-                item = QStandardItem(line)
-                self.listViewModel2.appendRow(item)
-                # Check if the line contains coordinates
-                if line.startswith('(') and line.endswith(')'):
-                    coords = line[1:-1].split(',')
-                    if len(coords) == 2:
-                        try:
-                            lng, lat = float(coords[0]), float(coords[1])
-                            self.received_coordinates.append([lat, lng])
-                            self.update_map_with_line()
-                        except ValueError:
-                            pass
-            except serial.SerialException as e:
-                print(f"Error reading from serial port: {e}")
+        # client = mqtt.Client("WindowsPublisher")
+
+        # client.on_connect = on_connect
+
+        # client.connect(broker_address, port)
+        # client.loop_start()
+
+        # number = 0
+
+        client.publish(topic, coord_str)
+        print(f"Published: {coord_str}")
+
+        time.sleep(1)  # Send a new number every second
+        client.loop_stop()
+        client.disconnect()
+        #print(coord_str)
+
+    # def read_from_serial(self):
+    #     if self.ser and self.ser.in_waiting > 0:
+    #         try:
+    #             line = self.ser.readline().decode('utf-8').strip()
+    #             item = QStandardItem(line)
+    #             self.listViewModel2.appendRow(item)
+    #             # Check if the line contains coordinates
+    #             if line.startswith('(') and line.endswith(')'):
+    #                 coords = line[1:-1].split(',')
+    #                 if len(coords) == 2:
+    #                     try:
+    #                         lng, lat = float(coords[0]), float(coords[1])
+    #                         self.received_coordinates.append([lat, lng])
+    #                         self.update_map_with_line()
+    #                     except ValueError:
+    #                         pass
+    #         except serial.SerialException as e:
+    #             print(f"Error reading from serial port: {e}")
 
     def update_map_with_line(self):
         # Create a polyline on the map with received coordinates
