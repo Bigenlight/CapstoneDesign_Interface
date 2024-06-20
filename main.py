@@ -9,8 +9,6 @@ import serial
 from folium.plugins import MarkerCluster
 import numpy as np
 from jinja2 import Template
-
-# mqtt
 import paho.mqtt.client as mqtt
 
 # Define the MQTT broker address and port
@@ -20,14 +18,22 @@ port = 1883  # Default MQTT port
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected to broker")
+        client.subscribe("test/topic")
     else:
         print("Connection failed with code", rc)
+
+def on_message(client, userdata, msg):
+    coords_str = msg.payload.decode()
+    coords = json.loads(coords_str)
+    window.add_coordinates_to_list(coords)
+    window.update_map_with_line()
 
 # Define the topic
 topic = "test/topic"
 
 client = mqtt.Client("WindowsPublisher")
 client.on_connect = on_connect
+client.on_message = on_message
 client.connect(broker_address, port)
 client.loop_start()
 
@@ -136,7 +142,7 @@ class WindowClass(QMainWindow, form_class):
         self.timer.start(1000)  # Poll every second
 
     def closeEvent(self, event):
-        if self.ser and self.ser.is_open:
+        if hasattr(self, 'ser') and self.ser.is_open:
             self.ser.close()
         event.accept()
 
@@ -239,7 +245,8 @@ class WindowClass(QMainWindow, form_class):
         ).render(map=self.m.get_name(), coordinates=json.dumps(self.received_coordinates))
         self.view.page().runJavaScript(js)
 
-w = WindowClass()
-w.show()
+# Instantiate the WindowClass globally so it can be accessed in on_message
+window = WindowClass()
+window.show()
 
 sys.exit(app.exec_())
