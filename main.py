@@ -11,9 +11,13 @@ import numpy as np
 from jinja2 import Template
 import paho.mqtt.client as mqtt
 
+######## MQTT
 # Define the MQTT broker address and port
 broker_address = "192.168.0.12"  # IP address of your Windows PC
 port = 1883  # Default MQTT port
+
+# Define the topic
+topic = "test/topic"
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -26,24 +30,19 @@ def on_message(client, userdata, msg):
     try:
         coords_str = msg.payload.decode()
         lat, lng = map(float, coords_str.strip('()').split(', '))
-        window.received_coordinates.append([lat, lng])
-        window.update_map_with_line()
-        window.add_received_message_to_list(coords_str)
+        # Use Qt's signal-slot mechanism to update the UI thread safely
+        window.mqtt_message_received.emit(lat, lng, coords_str)
     except Exception as e:
         print(f"Error processing message: {e}")
-
-# Define the topic
-topic = "test/topic"
 
 client = mqtt.Client("WindowsPublisher")
 client.on_connect = on_connect
 client.on_message = on_message
-client.connect(broker_address, port)
-client.loop_start()
 
 form_class = uic.loadUiType("V1_UI.ui")[0]
 app = QtWidgets.QApplication(sys.argv)
 
+###### 여기 부터 인터페이스 코드
 class WebEnginePage(QtWebEngineWidgets.QWebEnginePage):
     def __init__(self, parent=None):
         super(WebEnginePage, self).__init__(parent)
@@ -63,6 +62,8 @@ class WebEnginePage(QtWebEngineWidgets.QWebEnginePage):
 
 ##### Qt widget Layout
 class WindowClass(QMainWindow, form_class):
+    mqtt_message_received = QtCore.pyqtSignal(float, float, str)
+
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -144,6 +145,16 @@ class WindowClass(QMainWindow, form_class):
         # Set up a timer to poll the serial port
         self.timer = QTimer()
         self.timer.start(1000)  # Poll every second
+
+        # Connect the custom signal to the slot for handling MQTT messages
+        self.mqtt_message_received.connect(self.handle_mqtt_message)
+
+        # Start the MQTT client after initialization
+        QTimer.singleShot(2000, self.start_mqtt_client)
+
+    def start_mqtt_client(self):
+        client.connect(broker_address, port)
+        client.loop_start()
 
     def closeEvent(self, event):
         if hasattr(self, 'ser') and self.ser.is_open:
@@ -252,6 +263,11 @@ class WindowClass(QMainWindow, form_class):
         """
         ).render(map=self.m.get_name(), coordinates=json.dumps(self.received_coordinates))
         self.view.page().runJavaScript(js)
+
+    def handle_mqtt_message(self, lat, lng, coords_str):
+        self.received_coordinates.append([lat, lng])
+        self.update_map_with_line()
+        self.add_received_message_to_list(coords_str)
 
 # Instantiate the WindowClass globally so it can be accessed in on_message
 window = WindowClass()
