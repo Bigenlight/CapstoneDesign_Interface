@@ -18,15 +18,19 @@ port = 1883  # Default MQTT port
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("Connected to broker")
-        client.subscribe("test/topic")
+        client.subscribe("gps_location_topic")
     else:
         print("Connection failed with code", rc)
 
 def on_message(client, userdata, msg):
-    coords_str = msg.payload.decode()
-    coords = json.loads(coords_str)
-    window.add_coordinates_to_list(coords)
-    window.update_map_with_line()
+    try:
+        coords_str = msg.payload.decode()
+        lat, lng = map(float, coords_str.strip('()').split(', '))
+        window.received_coordinates.append([lat, lng])
+        window.update_map_with_line()
+        window.add_received_message_to_list(coords_str)
+    except Exception as e:
+        print(f"Error processing message: {e}")
 
 # Define the topic
 topic = "test/topic"
@@ -176,6 +180,10 @@ class WindowClass(QMainWindow, form_class):
     def add_coordinates_to_list(self, coords):
         item = QStandardItem(f"Longitude: {coords[0]}, Latitude: {coords[1]}")
         self.listViewModel.appendRow(item)
+
+    def add_received_message_to_list(self, message):
+        item = QStandardItem(message)
+        self.listViewModel2.appendRow(item)
 
     def clear_coordinates_list(self):
         self.listViewModel.clear()
