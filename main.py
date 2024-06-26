@@ -16,8 +16,9 @@ import paho.mqtt.client as mqtt
 broker_address = "192.168.0.12"  # IP address of your Windows PC
 port = 1883  # Default MQTT port
 
-# Define the topic
+# Define the topics
 topic = "test/topic"
+motor_state_topic = "motor_state"
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -141,6 +142,8 @@ class WindowClass(QMainWindow, form_class):
         self.pushButton_2.clicked.connect(self.clear_coordinates_list)
         self.pushButton_1.clicked.connect(self.draw_line_between_coordinates)
         self.pushButton_3.clicked.connect(self.send_coordinates_over_serial)
+        self.pushButton.clicked.connect(self.send_motor_state)  # Connect pushButton to send_motor_state method
+        self.pushButton_4.clicked.connect(self.send_motor_state_stop)
 
         # Set up a timer to poll the serial port
         self.timer = QTimer()
@@ -268,6 +271,13 @@ class WindowClass(QMainWindow, form_class):
         self.received_coordinates.append([lat, lng])
         self.update_map_with_line()
         self.add_received_message_to_list(coords_str)
+
+    def send_motor_state(self):
+        client.publish(motor_state_topic, "start", qos=1)
+        print("Published: 'on' to motor_state")
+    def send_motor_state_stop(self):
+        client.publish(motor_state_topic, "stop", qos=1)
+        print("Published: 'stop' to motor_state")
 
 # Instantiate the WindowClass globally so it can be accessed in on_message
 window = WindowClass()

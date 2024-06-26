@@ -142,14 +142,14 @@
       <item>
        <widget class="QPushButton" name="pushButton">
         <property name="text">
-         <string>준비</string>
+         <string>가동</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="pushButton_4">
         <property name="text">
-         <string>중지</string>
+         <string>정지</string>
         </property>
        </widget>
       </item>
