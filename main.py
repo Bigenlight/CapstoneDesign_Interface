@@ -13,7 +13,10 @@ import paho.mqtt.client as mqtt
 
 ######## MQTT
 # Define the MQTT broker address and port
-broker_address = "192.168.0.12"  # IP address of your Windows PC
+# iceslab_5g
+#broker_address = "192.168.0.12"  # IP address of your Windows PC
+# 핫스팟
+broker_address = "192.168.151.154"
 port = 1883  # Default MQTT port
 
 # Define the topics
