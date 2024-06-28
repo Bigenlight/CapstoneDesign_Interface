@@ -14,13 +14,17 @@ import paho.mqtt.client as mqtt
 ######## MQTT
 # Define the MQTT broker address and port
 # iceslab_5g
-#broker_address = "192.168.0.12"  # IP address of your Windows PC
+#broker_address = "192.168.0.12" 
 # 핫스팟
-broker_address = "192.168.151.154"
+#broker_address = "192.168.151.154"
+# 노트북 핫스팟
+broker_address = "192.168.137.1" 
+
 port = 1883  # Default MQTT port
 
 # Define the topics
 topic = "test/topic"
+# 모터 상태 토픽
 motor_state_topic = "motor_state"
 
 def on_connect(client, userdata, flags, rc):
@@ -141,12 +145,12 @@ class WindowClass(QMainWindow, form_class):
         # List to store received coordinates
         self.received_coordinates = []
 
-        # Connect buttons to their respective methods
-        self.pushButton_2.clicked.connect(self.clear_coordinates_list)
-        self.pushButton_1.clicked.connect(self.draw_line_between_coordinates)
-        self.pushButton_3.clicked.connect(self.send_coordinates_over_serial)
-        self.pushButton.clicked.connect(self.send_motor_state)  # Connect pushButton to send_motor_state method
-        self.pushButton_4.clicked.connect(self.send_motor_state_stop)
+        # 버튼과 함수 연결
+        self.pushButton_2.clicked.connect(self.clear_coordinates_list) # 리스트 초기화
+        self.pushButton_1.clicked.connect(self.draw_line_between_coordinates) # 경로 생성
+        self.pushButton_3.clicked.connect(self.send_coordinates_over_serial) # 경로 전송
+        self.pushButton.clicked.connect(self.send_motor_state) # 가동
+        self.pushButton_4.clicked.connect(self.send_motor_state_stop) # 중지
 
         # Set up a timer to poll the serial port
         self.timer = QTimer()
