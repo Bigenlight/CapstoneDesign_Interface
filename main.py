@@ -15,9 +15,9 @@ import paho.mqtt.client as mqtt
 # Define the MQTT broker address and port
 # iceslab_5g
 #broker_address = "192.168.0.12" 
-# 핫스팟
+# 핫스팟 (휴대폰)
 #broker_address = "192.168.151.154"
-# 노트북 핫스팟
+# 노트북 핫스팟 (테더링)
 broker_address = "192.168.137.1" 
 
 port = 1883  # Default MQTT port
