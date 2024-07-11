@@ -1,16 +1,3 @@
-import time
-from PyQt5 import uic, QtCore, QtWidgets, QtWebEngineWidgets  # pip install pyqtwebengine
-from folium.plugins import Draw, MousePosition
-import folium, io, sys, json
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QMainWindow, QLabel
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5.QtCore import QObject, pyqtSignal, QTimer
-import serial
-from folium.plugins import MarkerCluster
-import numpy as np
-from jinja2 import Template
-import paho.mqtt.client as mqtt
-
 ######## MQTT
 # Define the MQTT broker address and port
 # iceslab_5g
@@ -20,11 +7,29 @@ import paho.mqtt.client as mqtt
 # 노트북 핫스팟 (테더링)
 broker_address = "192.168.137.1" 
 
+import time
+from PyQt5 import uic, QtCore, QtWidgets, QtWebEngineWidgets
+from folium.plugins import Draw, MousePosition
+import folium, io, sys, json
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QMainWindow, QLabel, QHBoxLayout
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QImage, QPixmap
+from PyQt5.QtCore import QObject, pyqtSignal, QTimer
+import serial
+from folium.plugins import MarkerCluster
+import numpy as np
+from jinja2 import Template
+import paho.mqtt.client as mqtt
+import cv2
+import zmq
+import base64
+
+######## MQTT
+# Define the MQTT broker address and port
+broker_address = "192.168.137.1" 
 port = 1883  # Default MQTT port
 
 # Define the topics
 topic = "test/topic"
-# 모터 상태 토픽
 motor_state_topic = "motor_state"
 
 def on_connect(client, userdata, flags, rc):
@@ -43,7 +48,7 @@ def on_message(client, userdata, msg):
     except Exception as e:
         print(f"Error processing message: {e}")
 
-client = mqtt.Client("WindowsPublisher")
+client = mqtt.Client(client_id="WindowsPublisher", protocol=mqtt.MQTTv311, transport="tcp", callback_api_version=2)
 client.on_connect = on_connect
 client.on_message = on_message
 
@@ -162,6 +167,24 @@ class WindowClass(QMainWindow, form_class):
         # Start the MQTT client after initialization
         QTimer.singleShot(2000, self.start_mqtt_client)
 
+        #######################
+        # ZMQ setup for video streaming
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.SUB)
+        self.socket.connect("tcp://192.168.137.1:5555")  # Use your Raspberry Pi's IP
+        self.socket.setsockopt_string(zmq.SUBSCRIBE, "")
+
+        # Timer for updating video frame
+        self.video_timer = QTimer(self)
+        self.video_timer.timeout.connect(self.update_frame)
+        self.video_timer.start(30)  # Update every 30 ms
+
+        # Add video label to layout
+        self.label_video = QLabel(self)
+        self.video_layout.addWidget(self.label_video)
+        ######################
+        
+
     def start_mqtt_client(self):
         client.connect(broker_address, port)
         client.loop_start()
@@ -169,6 +192,8 @@ class WindowClass(QMainWindow, form_class):
     def closeEvent(self, event):
         if hasattr(self, 'ser') and self.ser.is_open:
             self.ser.close()
+        self.socket.close()
+        self.context.term()
         event.accept()
 
     def GetPosition(self, latitude=37, longitude=127):
@@ -282,9 +307,25 @@ class WindowClass(QMainWindow, form_class):
     def send_motor_state(self):
         client.publish(motor_state_topic, "start", qos=1)
         print("Published: 'on' to motor_state")
+
     def send_motor_state_stop(self):
         client.publish(motor_state_topic, "stop", qos=1)
         print("Published: 'stop' to motor_state")
+
+    def update_frame(self):
+        try:
+            jpg_as_text = self.socket.recv_string(flags=zmq.NOBLOCK)
+            jpg_as_np = np.frombuffer(base64.b64decode(jpg_as_text), dtype=np.uint8)
+            image = cv2.imdecode(jpg_as_np, cv2.IMREAD_COLOR)
+
+            height, width, channel = image.shape
+            bytes_per_line = 3 * width
+            q_image = QImage(image.data, width, height, bytes_per_line, QImage.Format_RGB888).rgbSwapped()
+            self.label_video.setPixmap(QPixmap.fromImage(q_image))
+        except zmq.Again:
+            pass  # No message available
+        except Exception as e:
+            print(f"Error updating frame: {e}")
 
 # Instantiate the WindowClass globally so it can be accessed in on_message
 window = WindowClass()
