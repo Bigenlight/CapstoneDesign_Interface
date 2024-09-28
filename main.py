@@ -22,7 +22,7 @@ import re
 #broker_address = "192.168.137.1" 
 # ices_lab
 broker_address = "192.168.0.12" 
-
+#
 port = 1883  # Default MQTT port
 
 # Define the topics
