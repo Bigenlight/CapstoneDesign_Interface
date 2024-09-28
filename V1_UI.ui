@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1178</width>
-    <height>864</height>
+    <width>1195</width>
+    <height>901</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,13 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
-     <layout class="QHBoxLayout" name="Outer_Layout" stretch="8">
+     <layout class="QHBoxLayout" name="Outer_Layout" stretch="0,0">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetMaximumSize</enum>
+      </property>
+      <item>
+       <layout class="QVBoxLayout" name="video_layout"/>
+      </item>
       <item>
        <layout class="QVBoxLayout" name="Folium">
         <property name="spacing">
@@ -198,7 +204,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1178</width>
+     <width>1195</width>
      <height>22</height>
     </rect>
    </property>
