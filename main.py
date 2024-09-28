@@ -10,6 +10,7 @@ from folium.plugins import MarkerCluster
 import numpy as np
 from jinja2 import Template
 import paho.mqtt.client as mqtt
+import re
 
 ######## MQTT
 # Define the MQTT broker address and port
@@ -18,7 +19,9 @@ import paho.mqtt.client as mqtt
 # 핫스팟
 #broker_address = "192.168.151.154"
 # 노트북 핫스팟
-broker_address = "192.168.137.1" 
+#broker_address = "192.168.137.1" 
+# ices_lab
+broker_address = "192.168.0.12" 
 
 port = 1883  # Default MQTT port
 
@@ -35,13 +38,18 @@ def on_connect(client, userdata, flags, rc):
         print("Connection failed with code", rc)
 
 def on_message(client, userdata, msg):
+    coords_str = msg.payload.decode()
+    print(f"Full received message: {coords_str}")  # Add this line to print the full message
     try:
-        coords_str = msg.payload.decode()
-        lat, lng = map(float, coords_str.strip('()').split(', '))
-        # Use Qt's signal-slot mechanism to update the UI thread safely
-        window.mqtt_message_received.emit(lat, lng, coords_str)
+        # Clean the string and extract coordinates
+        coords_str_clean = coords_str.replace('(', '').replace(')', '').replace(';', '').strip()
+        lat_str, lng_str = coords_str_clean.split(', ')
+        lat = float(lat_str)
+        lng = float(lng_str)
+        window.mqtt_message_received.emit(lat, lng)
     except Exception as e:
         print(f"Error processing message: {e}")
+
 
 client = mqtt.Client("WindowsPublisher")
 client.on_connect = on_connect
@@ -70,7 +78,7 @@ class WebEnginePage(QtWebEngineWidgets.QWebEnginePage):
 
 ##### Qt widget Layout
 class WindowClass(QMainWindow, form_class):
-    mqtt_message_received = QtCore.pyqtSignal(float, float, str)
+    mqtt_message_received = QtCore.pyqtSignal(float, float)
 
     def __init__(self):
         super().__init__()
@@ -202,7 +210,7 @@ class WindowClass(QMainWindow, form_class):
         item = QStandardItem(f"Longitude: {coords[0]}, Latitude: {coords[1]}")
         self.listViewModel.appendRow(item)
 
-    def add_received_message_to_list(self, message):
+    def add_received_message_to_list(self, message): # 우측 하단 리스트 출력
         item = QStandardItem(message)
         self.listViewModel2.appendRow(item)
 
@@ -274,10 +282,10 @@ class WindowClass(QMainWindow, form_class):
         ).render(map=self.m.get_name(), coordinates=json.dumps(self.received_coordinates))
         self.view.page().runJavaScript(js)
 
-    def handle_mqtt_message(self, lat, lng, coords_str):
+    def handle_mqtt_message(self, lat, lng):
         self.received_coordinates.append([lat, lng])
         self.update_map_with_line()
-        self.add_received_message_to_list(coords_str)
+        self.add_received_message_to_list(f"Lat: {lat}, Long: {lng}") # 우측 하단 리스트 출력
 
     def send_motor_state(self):
         client.publish(motor_state_topic, "start", qos=1)
