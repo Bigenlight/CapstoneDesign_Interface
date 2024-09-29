@@ -93,6 +93,15 @@ class WindowClass(QMainWindow, form_class):
             location=[37.631104100930436, 127.0779647879758], zoom_start=13
         )
 
+        # Initialize a timer for map updates
+        self.map_update_timer = QTimer()
+        self.map_update_timer.timeout.connect(self.update_map_with_line)
+        self.map_update_interval = 1000  # Update every 1000 ms (1 second)
+        self.map_update_timer.start(self.map_update_interval)
+
+        # Buffer for received coordinates
+        self.received_coordinates_buffer = []
+
         folium.raster_layers.TileLayer(
             tiles="http://mt1.google.com/vt/lyrs=m&h1=p1Z&x={x}&y={y}&z={z}",
             name="Standard Roadmap",
@@ -273,19 +282,25 @@ class WindowClass(QMainWindow, form_class):
         time.sleep(1)
 
     def update_map_with_line(self):
-        # Create a polyline on the map with received coordinates
-        js = Template(
+        if self.received_coordinates_buffer:
+            # Append buffered coordinates to the main list
+            self.received_coordinates.extend(self.received_coordinates_buffer)
+            self.received_coordinates_buffer.clear()
+
+            # Update the map
+            js = Template(
+                """
+            console.log("Drawing line with coordinates: {{coordinates}}");
+            L.polyline({{coordinates}}, {color: 'red'}).addTo({{map}});
             """
-        console.log("Drawing line with coordinates: {{coordinates}}");
-        L.polyline({{coordinates}}, {color: 'red'}).addTo({{map}});
-        """
-        ).render(map=self.m.get_name(), coordinates=json.dumps(self.received_coordinates))
-        self.view.page().runJavaScript(js)
+            ).render(map=self.m.get_name(), coordinates=json.dumps(self.received_coordinates))
+            self.view.page().runJavaScript(js)
 
     def handle_mqtt_message(self, lat, lng):
-        self.received_coordinates.append([lat, lng])
-        self.update_map_with_line()
-        self.add_received_message_to_list(f"Lat: {lat}, Long: {lng}") # 우측 하단 리스트 출력
+        # Instead of updating the map immediately, add to a buffer
+        self.received_coordinates_buffer.append([lat, lng])
+        # Add to list view if needed
+        self.add_received_message_to_list(f"Lat: {lat}, Long: {lng}") # 우측하단 리스트 추가
 
     def send_motor_state(self):
         client.publish(motor_state_topic, "start", qos=1)
