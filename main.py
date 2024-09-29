@@ -290,8 +290,11 @@ class WindowClass(QMainWindow, form_class):
             # Update the map
             js = Template(
                 """
-            console.log("Drawing line with coordinates: {{coordinates}}");
-            L.polyline({{coordinates}}, {color: 'red'}).addTo({{map}});
+            if (typeof window.polyline === 'undefined') {
+                window.polyline = L.polyline({{coordinates}}, {color: 'red'}).addTo({{map}});
+            } else {
+                window.polyline.setLatLngs({{coordinates}});
+            }
             """
             ).render(map=self.m.get_name(), coordinates=json.dumps(self.received_coordinates))
             self.view.page().runJavaScript(js)
