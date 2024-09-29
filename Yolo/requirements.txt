@@ -1,0 +1,8 @@
+folium==0.12.1
+Jinja2==3.0.1
+numpy==1.21.2
+paho-mqtt==1.5.1
+pyserial==3.5
+PyQt5==5.15.4
+PyQtWebEngine==5.15.4
+shapely==1.7.1
